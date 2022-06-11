@@ -1,6 +1,6 @@
 # hackathon2022
 
-A simple dashboard for visualizing well header and tops data.
+A simple dashboard for visualizing well header and tops data for QC purposes.
 
 ## Well header
 We looked at kb elevation and groud elevation. In theory, kb elevation should always be higher than ground elevation. Wells with invalid kb elevation and ground elevation are highlighted in different colors in the plot. 
