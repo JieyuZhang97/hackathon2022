@@ -1,7 +1,7 @@
 #%%
 import plotly.graph_objects as go
 
-
+import welltrajconvert as wtc
 import json
 import requests
 import pandas as pd 
@@ -18,8 +18,8 @@ def get_well_data(uwis_list,url):
 	"uwis": uwis_list}
 
     x = requests.post(url, data = json.dumps(myobj), headers=headers)
-    df_well_tops = pd.DataFrame.from_records(x.json())
-    return df_well_tops
+    df_well = pd.DataFrame.from_records(x.json())
+    return df_well
 
 def create_well_header_qc_map(df_well_headers, filter_columns_dict, longitude_col = 'surface_longitude',latitude_col = 'surface_latitude',hover_text_col = 'well_name'):
     fig = go.Figure()
@@ -133,6 +133,7 @@ def get_well_formation_estimation(df_well_tops_org):
 
     kdtree=cKDTree(data)
     dist,points=kdtree.query(sample,1)
+    #TODO: set a threshold for dist, if dist > the threshold, the sample will not be used as nearest neighbor
 
     df_well_tops.loc[formation_null_mask,'formation_estimate'] = df_well_tops.loc[~formation_null_mask,'formation'].iloc[points].values
     df_well_tops['formation_complete'] = df_well_tops['formation'].fillna(df_well_tops['formation_estimate'])
@@ -143,3 +144,56 @@ def get_utm(lat,long):
 
     easting, northing = projection(long,lat)
     return easting, northing
+
+def clean_well_directional_data(well_dir_survey):
+    well_dir_survey = well_dir_survey.sort_values(['uwi','total_measured_depth']).reset_index()
+    well_dir_survey.drop(columns=['index'], inplace=True)
+    # set arbitrary lat and long default values
+    well_dir_survey['surface_latitude'] = 35
+    well_dir_survey['surface_longitude'] = 0
+    return well_dir_survey
+
+def convert_directional_to_location(well_dir_survey):
+    well_position_log = None
+    uwis = well_dir_survey['uwi'].unique()
+
+    for uwi in uwis:
+
+        try:
+            # call the from_df method, fill in the parameters with the column names
+            my_data = wtc.DataSource.from_df(well_dir_survey[well_dir_survey['uwi']==uwi], wellId_name='uwi',
+                    md_name='total_measured_depth',inc_name='inclination',azim_name='azimuth',
+                    surface_latitude_name='surface_latitude',surface_longitude_name='surface_longitude')
+
+            #view the dict data dataclass object
+            #     my_data.data
+            #create a wellboreTrajectory object
+            dev_obj = wtc.WellboreTrajectory(my_data.data)
+            #view the object
+            #     dev_obj.deviation_survey_obj
+            #calculate the survey points along the wellbore for the object
+            dev_obj.calculate_survey_points()
+            #serialize the data
+            json_ds = dev_obj.serialize()
+
+            # view the json in a df
+            json_ds_obj = json.loads(json_ds)
+
+            if well_position_log is None:
+                well_position_log = pd.DataFrame(json_ds_obj)
+                print(f'processed well {uwi}')
+
+            else:
+                well_position_log = pd.concat([well_position_log, pd.DataFrame.from_records(json_ds_obj)])
+        except Exception:
+            print(f'failed for well {uwi}')
+            
+
+        
+
+
+
+
+
+
+
