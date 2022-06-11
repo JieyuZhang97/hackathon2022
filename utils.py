@@ -12,7 +12,7 @@ from scipy.interpolate import griddata
 
 def get_well_data(uwis_list,url):
 
-    headers = {'Content-Type': 'application/json', 'x-api-key': 'Z6omObqgyUa1N7ApvBHfZ88qHnPNi4Df2X0V3OKp'}
+    headers = {'Content-Type': 'application/json', 'x-api-key': API_KEY}
 
     myobj ={
 	"uwis": uwis_list}
