@@ -154,42 +154,56 @@ def clean_well_directional_data(well_dir_survey):
     return well_dir_survey
 
 def convert_directional_to_location(well_dir_survey):
-    well_position_log = None
-    uwis = well_dir_survey['uwi'].unique()
+	well_position_log = None
+	uwis = well_dir_survey['uwi'].unique()
 
-    for uwi in uwis:
+	for uwi in uwis:
+	    print(f'processing well {uwi}')
+	    try:
+		# call the from_df method, fill in the parameters with the column names
+		# my_data = wtc.DataSource.from_df(well_dir_survey[well_dir_survey['uwi']==uwi], wellId_name='uwi',
+		#         md_name='total_measured_depth',inc_name='inclination',azim_name='azimuth',
+		#         surface_latitude_name='surface_latitude',surface_longitude_name='surface_longitude')
 
-        try:
-            # call the from_df method, fill in the parameters with the column names
-            my_data = wtc.DataSource.from_df(well_dir_survey[well_dir_survey['uwi']==uwi], wellId_name='uwi',
-                    md_name='total_measured_depth',inc_name='inclination',azim_name='azimuth',
-                    surface_latitude_name='surface_latitude',surface_longitude_name='surface_longitude')
+		dir_df =  well_dir_survey[well_dir_survey['uwi']==uwi][['uwi', 'total_measured_depth', 'inclination', 'azimuth']]
+		n = len(dir_df)
+		dir_df.columns = ['wellId', 'md', 'inc', 'azim']
+		dir_dict = dir_df[['md', 'inc', 'azim']].to_dict(orient='list')
+		dir_dict['wellId'] = uwi
+		dir_dict['surface_latitude'] = 29.90829444
+		dir_dict['surface_longitude'] = 47.68852083
+		# tvd=None, n_s_deviation=None, e_w_deviation=None, dls=None, surface_x=None, surface_y=None, x_points=None, y_points=None, zone_number=None, zone_letter=None, latitude_points=None, longitude_points=None, isHorizontal=None)
+		# print(dir_dict)
 
-            #view the dict data dataclass object
-            #     my_data.data
-            #create a wellboreTrajectory object
-            dev_obj = wtc.WellboreTrajectory(my_data.data)
-            #view the object
-            #     dev_obj.deviation_survey_obj
-            #calculate the survey points along the wellbore for the object
-            dev_obj.calculate_survey_points()
-            #serialize the data
-            json_ds = dev_obj.serialize()
+		#view the dict data dataclass object
+		#     my_data.data
+		#create a wellboreTrajectory object
+		# dev_obj = wtc.WellboreTrajectory(my_data.data)
+		dev_obj = wtc.WellboreTrajectory(dir_dict)
+		#view the object
+		#     dev_obj.deviation_survey_obj
+		#calculate the survey points along the wellbore for the object
+		dev_obj.calculate_survey_points()
+		#serialize the data
+		json_ds = dev_obj.serialize()
 
-            # view the json in a df
-            json_ds_obj = json.loads(json_ds)
+		# view the json in a df
+		json_ds_obj = json.loads(json_ds)
+		# print(json_ds_obj)
 
-            if well_position_log is None:
-                well_position_log = pd.DataFrame(json_ds_obj)
-                print(f'processed well {uwi}')
+		if well_position_log is None:
+		    well_position_log = pd.DataFrame(json_ds_obj)
+		    print(f'processed well {uwi}')
 
-            else:
-                well_position_log = pd.concat([well_position_log, pd.DataFrame.from_records(json_ds_obj)])
-        except Exception:
-            print(f'failed for well {uwi}')
-            
+		else:
+		    well_position_log = pd.concat([well_position_log, pd.DataFrame.from_records(json_ds_obj)])
+	    except:
+		print(f'failed for well {uwi}')
+		
+	return well_position_log
 
-        
+
+
 
 
 
